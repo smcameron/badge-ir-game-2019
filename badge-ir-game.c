@@ -11,10 +11,12 @@ code must run in.
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 #include "linuxcompat.h"
 #endif
 
+#include "badge-ir-game-protocol.h"
 #include "build_bug_on.h"
 
 #define ARRAYSIZE(x) (sizeof((x)) / sizeof((x)[0]))
@@ -22,8 +24,13 @@ code must run in.
 /* These need to be protected from interrupts. */
 static int last_packet_recieved = 0; /* maybe we need a queue here? */
 static int packet_arrived = 0;
-
-
+#define NO_GAME_START_TIME -1000000
+static volatile int seconds_until_game_starts = NO_GAME_START_TIME;
+static volatile int game_duration = -1;
+static volatile int game_start_timestamp = -1;
+static volatile int current_time = -1;
+static volatile int team = -1;
+static volatile int game_variant = -1;
 
 /* Builds up a 32 bit badge packet.
  * 1 bit for start
@@ -59,7 +66,7 @@ static unsigned char __attribute__((unused)) get_addr_bits(unsigned int packet)
 	return (unsigned char) ((packet >> 9) & 0x01f);
 }
 
-static unsigned short __attribute__((unused)) get_payload(unsigned int packet)
+static unsigned short get_payload(unsigned int packet)
 {
 	return (unsigned short) (packet & 0x0ffff);
 }
@@ -131,6 +138,8 @@ static void menu_add_item(char *text, enum game_state_type next_state, unsigned 
 static void draw_menu(void)
 {
 	int i, y, first_item, last_item;
+	char str[15], str2[15], title[15], timecode[15];
+	int color;
 
 	first_item = menu.current_item - 4;
 	if (first_item < 0)
@@ -160,6 +169,55 @@ static void draw_menu(void)
 	FbHorizontalLine(5, SCREEN_YDIM / 2 + 10, SCREEN_XDIM - 5, SCREEN_YDIM / 2 + 10);
 	FbVerticalLine(5, SCREEN_YDIM / 2 - 2, 5, SCREEN_YDIM / 2 + 10);
 	FbVerticalLine(SCREEN_XDIM - 5, SCREEN_YDIM / 2 - 2, SCREEN_XDIM - 5, SCREEN_YDIM / 2 + 10);
+
+
+	title[0] = '\0';
+	timecode[0] = '\0';
+	color = WHITE;	
+	if (seconds_until_game_starts == NO_GAME_START_TIME) {
+		strcpy(title, "GAME OVER");
+		strcpy(timecode, "");
+		color = YELLOW;
+	} else {
+		if (seconds_until_game_starts > 0) {
+			strcpy(title, "GAME STARTS IN");
+			itoa(timecode, seconds_until_game_starts, 10);
+			strcat(timecode, " SECS");
+			color = YELLOW;
+		} else {
+			if (seconds_until_game_starts > -game_duration) {
+				strcpy(title, "TIME LEFT:");
+				itoa(timecode, game_duration + seconds_until_game_starts, 10);
+				strcat(timecode, " SECS");
+				color = WHITE;
+			} else {
+				strcpy(title, "GAME OVER");
+				strcpy(timecode, "");
+				game_duration = -1;
+				seconds_until_game_starts = NO_GAME_START_TIME;
+				color = YELLOW;
+			}
+		}
+        }
+	FbColor(color);
+	FbMove(10, 100);
+	FbWriteLine(title);
+	FbMove(10, 110);
+	FbWriteLine(timecode);
+	if (team >= 0) {
+		FbMove(10, 80);
+		itoa(str, team, 10);
+		strcpy(str2, "TEAM:");
+		strcat(str2, str);
+		FbWriteLine(str2);
+	}
+	if (game_variant >= 0) {	
+		FbMove(10, 90);
+		itoa(str, game_variant, 10);
+		strcpy(str2, "GAME:");
+		strcat(str2, str);
+		FbWriteLine(str2);
+	}
 	game_state = GAME_SCREEN_RENDER;
 }
 
@@ -210,16 +268,52 @@ static void button_pressed()
 	}
 }
 
+static void set_game_start_timestamp(int time)
+{
+#ifdef __linux__
+	struct timeval tv;
+
+	gettimeofday(&tv, NULL);
+	game_start_timestamp = tv.tv_sec + time;
+#else
+	/* TODO: write this */
+#endif
+}
+
 static void process_packet(unsigned int packet)
 {
-	char str[20];
+	unsigned int payload;
+	unsigned char opcode;
+	int v;
 
-	itoa(str, packet, 10);
-	FbClear();
-	FbMove(5, 100);
-	FbColor(WHITE);
-	FbWriteLine(str);
-	game_state = GAME_SCREEN_RENDER;
+	payload = get_payload(packet);
+	opcode = payload >> 12;
+	switch (opcode) {
+	case OPCODE_SET_GAME_START_TIME:
+		/* time is a 12 bit signed number */
+		v = payload & 0x0fff;
+		if (payload & 0x0800)
+			v = -v;
+		seconds_until_game_starts = v;
+		set_game_start_timestamp(seconds_until_game_starts);
+		break;
+	case OPCODE_SET_GAME_DURATION:
+		/* time is 12 unsigned number */
+		game_duration = payload & 0x0fff;
+		break;
+	case OPCODE_HIT:
+		break;
+	case OPCODE_REQUEST_BADGE_DUMP:
+		break;
+	case OPCODE_SET_BADGE_TEAM:
+		team = payload & 0x0f; /* TODO sanity check this better. */
+		break;
+	case OPCODE_SET_GAME_VARIANT:
+		game_variant = payload & 0x0f; /* TODO sanity check this better. */
+		break;
+	default:
+		break;
+	}
 }
 
 static void check_for_incoming_packets(void)
@@ -238,6 +332,21 @@ static void check_for_incoming_packets(void)
 		process_packet(new_packet);
 }
 
+static void advance_time()
+{
+#ifdef __linux__
+	struct timeval tv;
+
+	gettimeofday(&tv, NULL);
+	current_time = tv.tv_sec;
+	if (seconds_until_game_starts != NO_GAME_START_TIME && game_start_timestamp != NO_GAME_START_TIME) {
+		seconds_until_game_starts = game_start_timestamp - tv.tv_sec;
+	}
+#else
+	/* TODO: fill this in */
+#endif
+}
+
 static void game_process_button_presses(void)
 {
 #ifdef __linux__
@@ -245,8 +354,10 @@ static void game_process_button_presses(void)
 
 	rc = wait_for_keypress(); /* or timeout */
 	check_for_incoming_packets();
+	advance_time();
 	if (rc == 0) { /* timed out, 1/10th second */
 		restore_original_input_mode();
+		game_state = GAME_MAIN_MENU;
 		return;
 	}
 	kp = get_keypress();

@@ -9,6 +9,7 @@
 #include <string.h>
 #include <errno.h>
 
+#include "badge-ir-game-protocol.h"
 #include "build_bug_on.h"
 
 static int fifo_fd = -1;
@@ -52,6 +53,26 @@ static void send_hit_packet(void)
 	send_a_packet(1234);
 }
 
+static void send_game_start_time(void)
+{
+	send_a_packet((OPCODE_SET_GAME_START_TIME << 12) | 60); /* 60 seconds */
+}
+
+static void send_game_duration(void)
+{
+	send_a_packet((OPCODE_SET_GAME_DURATION << 12) | 60); /* 60 seconds */
+}
+
+static void send_game_variant(void)
+{
+	send_a_packet((OPCODE_SET_GAME_VARIANT << 12) | 3);
+}
+
+static void send_team(void)
+{
+	send_a_packet((OPCODE_SET_BADGE_TEAM << 12) | 2);
+}
+
 int main(int argc, char *argv[])
 {
 	int rc, choice = 0;
@@ -65,6 +86,10 @@ int main(int argc, char *argv[])
 		printf("  Mock IR transmitter badge tester\n");
 		printf("\n");
 		printf("  1. Send a \"hit\" packet to the badge.\n");
+		printf("  2. Send game start time.\n");
+		printf("  3. Send game duration.\n");
+		printf("  4. Send game variant.\n");
+		printf("  5. Send team.\n");
 		printf("  0. Exit\n");
 		printf("\n");
 		printf("  Enter choice: ");
@@ -81,6 +106,14 @@ int main(int argc, char *argv[])
 		case 0:
 			break;
 		case 1: send_hit_packet();
+			break;
+		case 2: send_game_start_time();
+			break;
+		case 3: send_game_duration();
+			break;
+		case 4: send_game_variant();
+			break;
+		case 5: send_team();
 			break;
 		default:
 			printf("Invalid choice, try again.\n");
