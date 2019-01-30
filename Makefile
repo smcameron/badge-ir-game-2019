@@ -10,7 +10,7 @@ bline.o:	bline.c bline.h
 linuxcompat.o:	linuxcompat.c linuxcompat.h Makefile bline.h
 	${CC} ${CFLAGS} -c linuxcompat.c
 
-badge-ir-game:	badge-ir-game.c linuxcompat.o Makefile
+badge-ir-game:	badge-ir-game.c linuxcompat.o bline.o Makefile build_bug_on.h
 	${CC} ${CFLAGS} -o badge-ir-game badge-ir-game.c linuxcompat.o bline.o
 
 clean:
