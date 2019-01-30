@@ -5,6 +5,12 @@
 #include <unistd.h>
 #include <sys/select.h>
 #include <termios.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <errno.h>
 
 #include "bline.h"
 #include "linuxcompat.h"
@@ -266,10 +272,89 @@ void itoa(char *string, int value, __attribute__((unused)) int base)
 
 int abs(int x)
 {
-    return x > 0 ? x : -x;	
+    return x > 0 ? x : -x;
 }
 
 void returnToMenus(void)
 {
 	exit(0);
 }
+
+static void ir_packet_ignore(unsigned int packet)
+{
+}
+
+static void (*ir_packet_callback)(unsigned int) = ir_packet_ignore;
+
+
+void register_ir_packet_callback(void (*callback)(unsigned int))
+{
+	ir_packet_callback = callback;
+}
+
+static int fifo_fd = -1;
+
+static void *read_from_fifo(void *thread_info)
+{
+	int rc, count, bytesleft;
+	unsigned int buffer;
+	unsigned char *buf = (unsigned char *) &buffer;
+
+	fifo_fd = open("/tmp/badge-ir-fifo", O_RDONLY);
+	if (fifo_fd < 0) {
+		fprintf(stderr, "Failed to open /tmp/badge-ir-fifo: %s\n", strerror(errno));
+		exit(1);
+		return NULL;
+	}
+
+	count = 0;
+	bytesleft = 4;
+	do {
+		do {
+			rc = read(fifo_fd, &buf[count], bytesleft);
+			if (rc < 0 && errno == EINTR)
+				continue;
+			if (rc < 0) {
+				fprintf(stderr, "Failed to read from /tmp/badge-ir-fifo: %s\n", strerror(errno));
+				exit(1);
+				break;
+			}
+			if (rc == bytesleft) {
+				bytesleft = 4;
+				count = 0;
+				break;
+			}
+			bytesleft -= rc;
+			count += rc;
+		} while (bytesleft > 0);
+		if (rc < 0)
+			break;
+		disable_interrupts();
+		ir_packet_callback(buffer);
+		enable_interrupts();
+	} while (1);
+	return NULL;
+}
+
+void setup_ir_sensor()
+{
+	pthread_t thr;
+	int rc;
+
+	rc = pthread_create(&thr, NULL, read_from_fifo, NULL);
+	if (rc < 0)
+		fprintf(stderr, "Failed to create thread to read from fifo: %s\n", strerror(errno));
+}
+
+static pthread_mutex_t interrupt_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void disable_interrupts(void)
+{
+	pthread_mutex_lock(&interrupt_mutex);
+}
+
+void enable_interrupts(void)
+{
+	pthread_mutex_unlock(&interrupt_mutex);
+}
+

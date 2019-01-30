@@ -1,5 +1,5 @@
 
-CFLAGS=-fsanitize=address -Wall --pedantic -g
+CFLAGS=-pthread -fsanitize=address -Wall --pedantic -g
 CC=gcc
 
 all:	badge-ir-game
