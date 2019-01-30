@@ -31,6 +31,15 @@ static volatile int game_start_timestamp = -1;
 static volatile int current_time = -1;
 static volatile int team = -1;
 static volatile int game_variant = -1;
+static volatile int suppress_further_hits_until = -1;
+
+#define MAX_HIT_TABLE_ENTRIES 256
+static struct hit_table_entry {
+	unsigned short badgeid;
+	unsigned short timestamp;
+	unsigned char team; 
+} hit_table[MAX_HIT_TABLE_ENTRIES];
+static int nhits = 0;
 
 /* Builds up a 32 bit badge packet.
  * 1 bit for start
@@ -47,23 +56,29 @@ static unsigned int __attribute__((unused)) build_ir_packet(unsigned char start,
 
 	unsigned int packet;
 
-	packet = ((start & 0x01) << 15) | ((cmd & 0x01) << 14) | ((addr & 0x01f) << 9) | payload;
+	packet = ((start & 0x01) << 31) | ((cmd & 0x01) << 30) | ((addr & 0x01f) << 25) |
+		 ((badge_id & 0x1ff) << 16) | (payload & 0x0ffff);
 	return packet;
 }
 
 static unsigned char __attribute__((unused)) get_start_bit(unsigned int packet)
 {
-	return (unsigned char) ((packet >> 15) & 0x01);
+	return (unsigned char) ((packet >> 31) & 0x01);
 }
 
 static unsigned char __attribute__((unused)) get_cmd_bit(unsigned int packet)
 {
-	return (unsigned char) ((packet >> 14) & 0x01);
+	return (unsigned char) ((packet >> 30) & 0x01);
 }
 
 static unsigned char __attribute__((unused)) get_addr_bits(unsigned int packet)
 {
-	return (unsigned char) ((packet >> 9) & 0x01f);
+	return (unsigned char) ((packet >> 25) & 0x01f);
+}
+
+static unsigned char __attribute__((unused)) get_badge_id_bits(unsigned int packet)
+{
+	return (unsigned char) ((packet >> 16) & 0x01f);
 }
 
 static unsigned short get_payload(unsigned int packet)
@@ -199,7 +214,21 @@ static void draw_menu(void)
 			}
 		}
         }
+	if (suppress_further_hits_until > 0) { /* have been hit recently */
+		color = RED;
+		FbColor(color);
+		FbMove(10, 50);
+		strcpy(str, "DEADTIME:");
+		itoa(str2, suppress_further_hits_until - current_time, 10);
+		strcat(str, str2);
+		FbWriteLine(str);
+	}
 	FbColor(color);
+	FbMove(10, 40);
+	strcpy(str, "HITS:");
+	itoa(str2, nhits, 10);
+	strcat(str, str2);
+	FbWriteLine(str);
 	FbMove(10, 100);
 	FbWriteLine(title);
 	FbMove(10, 110);
@@ -280,6 +309,28 @@ static void set_game_start_timestamp(int time)
 #endif
 }
 
+static void process_hit(unsigned int packet)
+{
+	int timestamp;
+	unsigned char team = (get_payload(packet) | 0x0f);
+	unsigned short badgeid = get_badge_id_bits(packet);
+	timestamp = current_time - game_start_timestamp;
+	if (timestamp < 0) /* game has not started yet  */
+		return;
+	if (seconds_until_game_starts == NO_GAME_START_TIME)
+		return;
+	if (current_time < suppress_further_hits_until)
+		return;
+
+	hit_table[nhits].badgeid = badgeid;
+	hit_table[nhits].timestamp = (unsigned short) timestamp;
+	hit_table[nhits].team = team;
+	nhits++;
+	if (nhits >= MAX_HIT_TABLE_ENTRIES)
+		nhits = 0;
+	suppress_further_hits_until = current_time + 30;
+}
+
 static void process_packet(unsigned int packet)
 {
 	unsigned int payload;
@@ -296,12 +347,15 @@ static void process_packet(unsigned int packet)
 			v = -v;
 		seconds_until_game_starts = v;
 		set_game_start_timestamp(seconds_until_game_starts);
+		if (seconds_until_game_starts > 0)
+			nhits = 0; /* don't reset counter if game already started? */
 		break;
 	case OPCODE_SET_GAME_DURATION:
 		/* time is 12 unsigned number */
 		game_duration = payload & 0x0fff;
 		break;
 	case OPCODE_HIT:
+		process_hit(packet);
 		break;
 	case OPCODE_REQUEST_BADGE_DUMP:
 		break;
@@ -342,6 +396,8 @@ static void advance_time()
 	if (seconds_until_game_starts != NO_GAME_START_TIME && game_start_timestamp != NO_GAME_START_TIME) {
 		seconds_until_game_starts = game_start_timestamp - tv.tv_sec;
 	}
+	if (suppress_further_hits_until <= current_time)
+		suppress_further_hits_until = -1;
 #else
 	/* TODO: fill this in */
 #endif

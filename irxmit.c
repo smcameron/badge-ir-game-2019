@@ -50,7 +50,7 @@ static void send_a_packet(unsigned int packet)
 
 static void send_hit_packet(void)
 {
-	send_a_packet(1234);
+	send_a_packet((OPCODE_HIT << 12) | 3);
 }
 
 static void send_game_start_time(void)
