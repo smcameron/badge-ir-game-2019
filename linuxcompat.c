@@ -245,7 +245,7 @@ void set_nonblocking_input_mode(void)
 
 int wait_for_keypress(void)
 {
-    struct timeval tv = { 0L, 0L };
+    struct timeval tv = { 0L, 100000L }; /* 1/10th second timeout */
     fd_set fds;
 
     set_nonblocking_input_mode();

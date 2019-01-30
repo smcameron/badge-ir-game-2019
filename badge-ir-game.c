@@ -19,6 +19,12 @@ code must run in.
 
 #define ARRAYSIZE(x) (sizeof((x)) / sizeof((x)[0]))
 
+/* These need to be protected from interrupts. */
+static int last_packet_recieved = 0; /* maybe we need a queue here? */
+static int packet_arrived = 0;
+
+
+
 /* Builds up a 32 bit badge packet.
  * 1 bit for start
  * 1 bit for cmd,
@@ -169,10 +175,13 @@ static void menu_change_current_selection(int direction)
 static void ir_packet_callback(unsigned int packet)
 {
 	/* Interrupts will be already disabled when this is called. */
+        last_packet_recieved = packet;
+	packet_arrived = 1;
 }
 
 static void initial_state(void)
 {
+	FbInit();
 	setup_ir_sensor();
 	register_ir_packet_callback(ir_packet_callback);	
 	game_state = GAME_MAIN_MENU;
@@ -201,54 +210,87 @@ static void button_pressed()
 	}
 }
 
+static void process_packet(unsigned int packet)
+{
+	char str[20];
+
+	itoa(str, packet, 10);
+	FbClear();
+	FbMove(5, 100);
+	FbColor(WHITE);
+	FbWriteLine(str);
+	game_state = GAME_SCREEN_RENDER;
+}
+
+static void check_for_incoming_packets(void)
+{
+	unsigned int new_packet, got_packet;
+
+	got_packet = 0;
+	disable_interrupts();
+	if (packet_arrived) {
+		got_packet = 1;
+		new_packet = last_packet_recieved;
+		packet_arrived = 0;
+	}
+	enable_interrupts();
+	if (got_packet)
+		process_packet(new_packet);
+}
+
 static void game_process_button_presses(void)
 {
 #ifdef __linux__
-    int kp;
+	int rc, kp;
 
-    wait_for_keypress();
-    kp = get_keypress();
-    if (kp < 0) {
-        game_state = GAME_EXIT;
-        return;
-    }
-    switch (kp) {
-    case 'w':
-        if (menu.menu_active)
-            menu_change_current_selection(-1);
-        break;
-    case 's':
-        if (menu.menu_active)
-            menu_change_current_selection(1);
-        break;
-    case 'a':
-        break;
-    case 'd':
-        break;
-    case ' ':
-        button_pressed();
-        break;
-    case 'q':
-	exit(1);
-	break;
-    default:
-        break;
-    }
+	rc = wait_for_keypress(); /* or timeout */
+	check_for_incoming_packets();
+	if (rc == 0) { /* timed out, 1/10th second */
+		restore_original_input_mode();
+		return;
+	}
+	kp = get_keypress();
+	if (kp < 0) {
+		game_state = GAME_EXIT;
+		return;
+	}
+	switch (kp) {
+	case 'w':
+		if (menu.menu_active)
+			menu_change_current_selection(-1);
+		break;
+	case 's':
+		if (menu.menu_active)
+			menu_change_current_selection(1);
+		break;
+	case 'a':
+		break;
+	case 'd':
+		break;
+	case ' ':
+		button_pressed();
+		break;
+	case 'q':
+		exit(1);
+		break;
+	default:
+		break;
+	}
 #else
 
-    if (BUTTON_PRESSED_AND_CONSUME) {
-        button_pressed();
-    } else if (TOP_TAP_AND_CONSUME) {
-        if (menu.menu_active)
-            menu_change_current_selection(-1);
-    } else if (BOTTOM_TAP_AND_CONSUME) {
-        if (menu.menu_active)
-            menu_change_current_selection(1);
-    } else if (LEFT_TAP_AND_CONSUME) {
-    } else if (RIGHT_TAP_AND_CONSUME) {
-    } else {
-        return;
-    }
+	if (BUTTON_PRESSED_AND_CONSUME) {
+		button_pressed();
+	} else if (TOP_TAP_AND_CONSUME) {
+		if (menu.menu_active)
+			menu_change_current_selection(-1);
+	} else if (BOTTOM_TAP_AND_CONSUME) {
+		if (menu.menu_active)
+			menu_change_current_selection(1);
+	} else if (LEFT_TAP_AND_CONSUME) {
+	} else if (RIGHT_TAP_AND_CONSUME) {
+	} else {
+	return;
+}
 #endif
 }
 
