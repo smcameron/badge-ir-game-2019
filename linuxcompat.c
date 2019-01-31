@@ -96,6 +96,7 @@ void FbSwapBuffers(void)
     int x, y;
     unsigned char last_color = 255;
 
+    printf("\033[2J"); /* clear the screen */
     for (y = 0; y < SCREEN_YDIM; y++) {
         for (x = 0; x < SCREEN_XDIM; x++) {
             unsigned char c = screen_color[x][y];
