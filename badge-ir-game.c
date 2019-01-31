@@ -101,6 +101,7 @@ static void game_exit(void);
 static void game_main_menu(void);
 static void game_process_button_presses(void);
 static void game_screen_render(void);
+static void game_shoot(void);
 
 static enum game_state_type {
 	INITIAL_STATE = 0,
@@ -108,6 +109,7 @@ static enum game_state_type {
 	GAME_MAIN_MENU = 2,
 	GAME_PROCESS_BUTTON_PRESSES = 3,
 	GAME_SCREEN_RENDER = 4,
+	GAME_SHOOT = 5,
 } game_state = INITIAL_STATE;
 
 /* Note, game_state_fn[] array must have an entry for every value
@@ -118,6 +120,7 @@ static game_state_function game_state_fn[] = {
 	game_main_menu,
 	game_process_button_presses,
 	game_screen_render,
+	game_shoot,
 };
 
 struct menu_item {
@@ -295,6 +298,7 @@ static void game_main_menu(void)
 {
 	menu_clear();
 	menu.menu_active = 1;
+	menu_add_item("SHOOT", GAME_SHOOT, 0);
 	menu_add_item("EXIT GAME", GAME_EXIT, 0);
 	draw_menu();
 	game_state = GAME_SCREEN_RENDER;
@@ -478,6 +482,12 @@ static void game_process_button_presses(void)
 static void game_screen_render(void)
 {
 	FbSwapBuffers();
+	game_state = GAME_PROCESS_BUTTON_PRESSES;
+}
+
+static void game_shoot(void)
+{
+	/* TODO: implement shooting */
 	game_state = GAME_PROCESS_BUTTON_PRESSES;
 }
 
