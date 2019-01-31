@@ -24,6 +24,7 @@ void FbColor(int color);
    For now, I will assume I register a callback to receive 32-bit
    packets incoming from IR sensor. */
 void register_ir_packet_callback(void (*callback)(unsigned int));
+void unregister_ir_packet_callback(void (*callback)(unsigned int));
 void setup_ir_sensor(void);
 void disable_interrupts(void);
 void enable_interrupts(void);

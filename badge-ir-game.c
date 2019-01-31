@@ -321,6 +321,8 @@ static void initial_state(void)
 
 static void game_exit(void)
 {
+	unregister_ir_packet_callback(ir_packet_callback);
+	returnToMenus();
 }
 
 static void game_main_menu(void)
@@ -506,7 +508,7 @@ static void game_process_button_presses(void)
 		button_pressed();
 		break;
 	case 'q':
-		exit(1);
+		game_state = GAME_EXIT;
 		break;
 	default:
 		break;

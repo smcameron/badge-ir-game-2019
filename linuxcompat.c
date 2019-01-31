@@ -292,6 +292,11 @@ void register_ir_packet_callback(void (*callback)(unsigned int))
 	ir_packet_callback = callback;
 }
 
+void unregister_ir_packet_callback(void (*callback)(unsigned int))
+{
+	ir_packet_callback = ir_packet_ignore;
+}
+
 static int fifo_fd = -1;
 
 static void *read_from_fifo(void *thread_info)
