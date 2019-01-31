@@ -22,8 +22,10 @@ code must run in.
 #define ARRAYSIZE(x) (sizeof((x)) / sizeof((x)[0]))
 
 /* These need to be protected from interrupts. */
-static int last_packet_recieved = 0; /* maybe we need a queue here? */
-static int packet_arrived = 0;
+#define QUEUE_SIZE 100
+static int queue_in;
+static int queue_out;
+static int packet_queue[QUEUE_SIZE] = { 0 };
 #define NO_GAME_START_TIME -1000000
 static volatile int seconds_until_game_starts = NO_GAME_START_TIME;
 static volatile int game_duration = -1;
@@ -266,8 +268,13 @@ static void menu_change_current_selection(int direction)
 static void ir_packet_callback(unsigned int packet)
 {
 	/* Interrupts will be already disabled when this is called. */
-        last_packet_recieved = packet;
-	packet_arrived = 1;
+	int next_queue_in;
+
+	next_queue_in = (queue_in + 1) % QUEUE_SIZE;
+	if (next_queue_in == queue_out) /* queue is full, drop packet */
+		return;
+	packet_queue[queue_in] = packet;
+	queue_in = next_queue_in;
 }
 
 static void initial_state(void)
@@ -276,6 +283,8 @@ static void initial_state(void)
 	setup_ir_sensor();
 	register_ir_packet_callback(ir_packet_callback);	
 	game_state = GAME_MAIN_MENU;
+	queue_in = 0;
+	queue_out = 0;
 }
 
 static void game_exit(void)
@@ -376,18 +385,19 @@ static void process_packet(unsigned int packet)
 
 static void check_for_incoming_packets(void)
 {
-	unsigned int new_packet, got_packet;
+	unsigned int new_packet;
+	int next_queue_out;
 
-	got_packet = 0;
 	disable_interrupts();
-	if (packet_arrived) {
-		got_packet = 1;
-		new_packet = last_packet_recieved;
-		packet_arrived = 0;
+	while (queue_out != queue_in) {
+		next_queue_out = (queue_out + 1) % QUEUE_SIZE;
+		new_packet = packet_queue[queue_out];
+		queue_out = next_queue_out;
+		enable_interrupts();
+		process_packet(new_packet);
+		disable_interrupts();
 	}
 	enable_interrupts();
-	if (got_packet)
-		process_packet(new_packet);
 }
 
 static void advance_time()
