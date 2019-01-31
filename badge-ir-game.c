@@ -32,6 +32,12 @@ static volatile int current_time = -1;
 static volatile int team = -1;
 static volatile int game_variant = -1;
 static volatile int suppress_further_hits_until = -1;
+static const char *game_type[] = {
+	"free for all",
+	"team battle",
+	"zombies!",
+	"capture badge",
+};
 
 #define MAX_HIT_TABLE_ENTRIES 256
 static struct hit_table_entry {
@@ -242,9 +248,7 @@ static void draw_menu(void)
 	}
 	if (game_variant >= 0) {	
 		FbMove(10, 90);
-		itoa(str, game_variant, 10);
-		strcpy(str2, "GAME:");
-		strcat(str2, str);
+		strcpy(str2, game_type[game_variant % 4]);
 		FbWriteLine(str2);
 	}
 	game_state = GAME_SCREEN_RENDER;
