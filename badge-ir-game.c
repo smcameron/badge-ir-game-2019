@@ -33,6 +33,10 @@ static volatile int game_start_timestamp = -1;
 static volatile int current_time = -1;
 static volatile int team = -1;
 static volatile int game_variant = -1;
+#define GAME_VARIANT_FREE_FOR_ALL 0
+#define GAME_VARIANT_TEAM_BATTLE 1
+#define GAME_VARIANT_ZOMBIE 2
+#define GAME_VARIANT_CAPTURE_THE_BADGE 3
 static volatile int suppress_further_hits_until = -1;
 static const char *game_type[] = {
 	"free for all",
@@ -363,7 +367,7 @@ static void set_game_start_timestamp(int time)
 static void process_hit(unsigned int packet)
 {
 	int timestamp;
-	unsigned char team = (get_payload(packet) | 0x0f);
+	unsigned char shooter_team = (get_payload(packet) | 0x0f);
 	unsigned short badgeid = get_badge_id_bits(packet);
 	timestamp = current_time - game_start_timestamp;
 	if (timestamp < 0) /* game has not started yet  */
@@ -373,9 +377,21 @@ static void process_hit(unsigned int packet)
 	if (current_time < suppress_further_hits_until)
 		return;
 
+	switch (game_variant) {
+	case GAME_VARIANT_TEAM_BATTLE:
+	case GAME_VARIANT_ZOMBIE:
+	case GAME_VARIANT_CAPTURE_THE_BADGE:
+		if (team == shooter_team) /* exclude friendly fire */
+			return;
+	case GAME_VARIANT_FREE_FOR_ALL:
+		break;
+	default:
+		break;
+	}
+
 	hit_table[nhits].badgeid = badgeid;
 	hit_table[nhits].timestamp = (unsigned short) timestamp;
-	hit_table[nhits].team = team;
+	hit_table[nhits].team = shooter_team;
 	nhits++;
 	if (nhits >= MAX_HIT_TABLE_ENTRIES)
 		nhits = 0;
