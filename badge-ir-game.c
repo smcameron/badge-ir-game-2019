@@ -26,6 +26,8 @@ code must run in.
 static int queue_in;
 static int queue_out;
 static int packet_queue[QUEUE_SIZE] = { 0 };
+
+static int screen_changed = 0;
 #define NO_GAME_START_TIME -1000000
 static volatile int seconds_until_game_starts = NO_GAME_START_TIME;
 static volatile int game_duration = -1;
@@ -231,16 +233,22 @@ static void draw_menu(void)
 				strcpy(timecode, "");
 				game_duration = -1;
 				seconds_until_game_starts = NO_GAME_START_TIME;
+				screen_changed = 1;
 				color = YELLOW;
 			}
 		}
         }
 	if (suppress_further_hits_until > 0) { /* have been hit recently */
+		static int old_deadtime = 0;
 		color = RED;
 		FbColor(color);
 		FbMove(10, 50);
 		strcpy(str, "DEADTIME:");
 		itoa(str2, suppress_further_hits_until - current_time, 10);
+		if (old_deadtime != suppress_further_hits_until - current_time) {
+			old_deadtime = suppress_further_hits_until - current_time;
+			screen_changed = 1;
+		}
 		strcat(str, str2);
 		FbWriteLine(str);
 	}
@@ -271,11 +279,13 @@ static void draw_menu(void)
 
 static void menu_change_current_selection(int direction)
 {
+	int old = menu.current_item;
 	menu.current_item += direction;
 	if (menu.current_item < 0)
 		menu.current_item = menu.nitems - 1;
 	else if (menu.current_item >= menu.nitems)
 		menu.current_item = 0;
+	screen_changed |= (menu.current_item != old);
 }
 
 static void ir_packet_callback(unsigned int packet)
@@ -297,6 +307,7 @@ static void setup_main_menu(void)
 	strcpy(menu.title, "");
 	menu_add_item("SHOOT", GAME_SHOOT, 0);
 	menu_add_item("EXIT GAME", GAME_CONFIRM_EXIT, 0);
+	screen_changed = 1;
 }
 
 static void setup_confirm_exit_menu(void)
@@ -306,6 +317,7 @@ static void setup_confirm_exit_menu(void)
 	strcpy(menu.title, "REALLY QUIT?");
 	menu_add_item("DO NOT QUIT", GAME_EXIT_ABANDONED, 0);
 	menu_add_item("REALLY QUIT", GAME_EXIT, 0);
+	screen_changed = 1;
 }
 
 static void initial_state(void)
@@ -317,6 +329,7 @@ static void initial_state(void)
 	queue_out = 0;
 	setup_main_menu();
 	game_state = GAME_MAIN_MENU;
+	screen_changed = 1;
 }
 
 static void game_exit(void)
@@ -395,6 +408,7 @@ static void process_hit(unsigned int packet)
 	hit_table[nhits].timestamp = (unsigned short) timestamp;
 	hit_table[nhits].team = shooter_team;
 	nhits++;
+	screen_changed = 1;
 	if (nhits >= MAX_HIT_TABLE_ENTRIES)
 		nhits = 0;
 	suppress_further_hits_until = current_time + 30;
@@ -418,10 +432,12 @@ static void process_packet(unsigned int packet)
 		set_game_start_timestamp(seconds_until_game_starts);
 		if (seconds_until_game_starts > 0)
 			nhits = 0; /* don't reset counter if game already started? */
+		screen_changed = 1;
 		break;
 	case OPCODE_SET_GAME_DURATION:
 		/* time is 12 unsigned number */
 		game_duration = payload & 0x0fff;
+		screen_changed = 1;
 		break;
 	case OPCODE_HIT:
 		process_hit(packet);
@@ -430,9 +446,11 @@ static void process_packet(unsigned int packet)
 		break;
 	case OPCODE_SET_BADGE_TEAM:
 		team = payload & 0x0f; /* TODO sanity check this better. */
+		screen_changed = 1;
 		break;
 	case OPCODE_SET_GAME_VARIANT:
 		game_variant = payload & 0x0f; /* TODO sanity check this better. */
+		screen_changed = 1;
 		break;
 	default:
 		break;
@@ -460,6 +478,8 @@ static void advance_time()
 {
 #ifdef __linux__
 	struct timeval tv;
+	int old_time = seconds_until_game_starts;
+	int old_suppress = suppress_further_hits_until;
 
 	gettimeofday(&tv, NULL);
 	current_time = tv.tv_sec;
@@ -468,6 +488,9 @@ static void advance_time()
 	}
 	if (suppress_further_hits_until <= current_time)
 		suppress_further_hits_until = -1;
+	if (old_time != seconds_until_game_starts ||
+		old_suppress != suppress_further_hits_until)
+		screen_changed = 1;
 #else
 	/* TODO: fill this in */
 #endif
@@ -533,8 +556,11 @@ static void game_process_button_presses(void)
 
 static void game_screen_render(void)
 {
-	FbSwapBuffers();
 	game_state = GAME_PROCESS_BUTTON_PRESSES;
+	if (!screen_changed)
+		return;
+	FbSwapBuffers();
+	screen_changed = 0;
 }
 
 static void game_shoot(void)
