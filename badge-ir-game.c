@@ -288,6 +288,10 @@ static void initial_state(void)
 	game_state = GAME_MAIN_MENU;
 	queue_in = 0;
 	queue_out = 0;
+	menu_clear();
+	menu.menu_active = 1;
+	menu_add_item("SHOOT", GAME_SHOOT, 0);
+	menu_add_item("EXIT GAME", GAME_EXIT, 0);
 }
 
 static void game_exit(void)
@@ -296,10 +300,7 @@ static void game_exit(void)
 
 static void game_main_menu(void)
 {
-	menu_clear();
 	menu.menu_active = 1;
-	menu_add_item("SHOOT", GAME_SHOOT, 0);
-	menu_add_item("EXIT GAME", GAME_EXIT, 0);
 	draw_menu();
 	game_state = GAME_SCREEN_RENDER;
 }
@@ -488,7 +489,7 @@ static void game_screen_render(void)
 static void game_shoot(void)
 {
 	/* TODO: implement shooting */
-	game_state = GAME_PROCESS_BUTTON_PRESSES;
+	game_state = GAME_MAIN_MENU;
 }
 
 #ifdef __linux__
