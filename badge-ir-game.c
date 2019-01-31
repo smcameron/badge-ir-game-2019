@@ -102,6 +102,8 @@ static void game_main_menu(void);
 static void game_process_button_presses(void);
 static void game_screen_render(void);
 static void game_shoot(void);
+static void game_confirm_exit(void);
+static void game_exit_abandoned(void);
 
 static enum game_state_type {
 	INITIAL_STATE = 0,
@@ -110,6 +112,8 @@ static enum game_state_type {
 	GAME_PROCESS_BUTTON_PRESSES = 3,
 	GAME_SCREEN_RENDER = 4,
 	GAME_SHOOT = 5,
+	GAME_CONFIRM_EXIT = 6,
+	GAME_EXIT_ABANDONED = 7,
 } game_state = INITIAL_STATE;
 
 /* Note, game_state_fn[] array must have an entry for every value
@@ -121,6 +125,8 @@ static game_state_function game_state_fn[] = {
 	game_process_button_presses,
 	game_screen_render,
 	game_shoot,
+	game_confirm_exit,
+	game_exit_abandoned,
 };
 
 struct menu_item {
@@ -280,18 +286,33 @@ static void ir_packet_callback(unsigned int packet)
 	queue_in = next_queue_in;
 }
 
+static void setup_main_menu(void)
+{
+	menu_clear();
+	menu.menu_active = 1;
+	strcpy(menu.title, "");
+	menu_add_item("SHOOT", GAME_SHOOT, 0);
+	menu_add_item("EXIT GAME", GAME_CONFIRM_EXIT, 0);
+}
+
+static void setup_confirm_exit_menu(void)
+{
+	menu_clear();
+	menu.menu_active = 1;
+	strcpy(menu.title, "REALLY QUIT?");
+	menu_add_item("DO NOT QUIT", GAME_EXIT_ABANDONED, 0);
+	menu_add_item("REALLY QUIT", GAME_EXIT, 0);
+}
+
 static void initial_state(void)
 {
 	FbInit();
 	setup_ir_sensor();
 	register_ir_packet_callback(ir_packet_callback);	
-	game_state = GAME_MAIN_MENU;
 	queue_in = 0;
 	queue_out = 0;
-	menu_clear();
-	menu.menu_active = 1;
-	menu_add_item("SHOOT", GAME_SHOOT, 0);
-	menu_add_item("EXIT GAME", GAME_EXIT, 0);
+	setup_main_menu();
+	game_state = GAME_MAIN_MENU;
 }
 
 static void game_exit(void)
@@ -303,6 +324,18 @@ static void game_main_menu(void)
 	menu.menu_active = 1;
 	draw_menu();
 	game_state = GAME_SCREEN_RENDER;
+}
+
+static void game_confirm_exit(void)
+{
+	setup_confirm_exit_menu();
+	game_state = GAME_MAIN_MENU;
+}
+
+static void game_exit_abandoned(void)
+{
+	setup_main_menu();
+	game_state = GAME_MAIN_MENU;
 }
 
 static void button_pressed()
