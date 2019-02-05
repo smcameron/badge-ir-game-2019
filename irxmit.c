@@ -46,31 +46,86 @@ static void send_a_packet(unsigned int packet)
 		bytesleft -= rc;
 		count += rc;
 	} while (bytesleft > 0);
+	printf("\nSent packet: %08x\n", packet);
+	printf("      cmd: 0x%01x\n", (packet >> 31) & 0x01);
+	printf("    start: 0x%01x\n", (packet >> 30) & 0x01);
+	printf("  address: 0x%02x\n", (packet >> 25) & 0x1f);
+	printf(" badge ID: 0x%03x\n", (packet >> 16) & 0x1ff);
+	printf("  payload: 0x%04x\n\n", packet & 0x0ffff);
+}
+
+static unsigned int get_a_number(char *prompt, unsigned int mask)
+{
+	char *x;
+	char buffer[256];
+	unsigned int number;
+	int rc;
+
+	do {
+		printf("Enter %s: ", prompt);
+		x = fgets(buffer, sizeof(buffer), stdin);
+		if (!x) {
+			printf("Something went wrong.\n");
+			break;
+		}
+		rc = sscanf(buffer, "%u", &number);
+		if (rc != 1) {
+			printf("Bad number, try again.\n");
+			continue;
+		}
+		number &= mask;
+		return number;
+	} while (1);
+	return 0xffffffff & mask;
 }
 
 static void send_hit_packet(void)
 {
-	send_a_packet((OPCODE_HIT << 12) | 3);
+	unsigned int badge_id, team_id, packet;
+
+	badge_id = get_a_number("Shooter's badge ID", 0x01ff);
+	team_id = get_a_number("Shooter's team ID", 0x0f);
+
+	packet =
+		(1 << 31) |
+		(1 << 30) |
+		(BADGE_IR_GAME_ADDRESS << 25) |
+		(badge_id << 16) |
+		(OPCODE_HIT << 12) |
+		team_id;
+	send_a_packet(packet);
 }
 
 static void send_game_start_time(void)
 {
-	send_a_packet((OPCODE_SET_GAME_START_TIME << 12) | 60); /* 60 seconds */
+	unsigned int start_time;
+
+	start_time = get_a_number("seconds until game starts", 0x0fff);
+	send_a_packet((OPCODE_SET_GAME_START_TIME << 12) | start_time);
 }
 
 static void send_game_duration(void)
 {
-	send_a_packet((OPCODE_SET_GAME_DURATION << 12) | 60); /* 60 seconds */
+	unsigned int duration;
+
+	duration = get_a_number("duration of game in seconds", 0x0fff);
+	send_a_packet((OPCODE_SET_GAME_DURATION << 12) | duration);
 }
 
 static void send_game_variant(void)
 {
-	send_a_packet((OPCODE_SET_GAME_VARIANT << 12) | 3);
+	unsigned int game_variant;
+
+	game_variant = get_a_number("game variant", 0x0f);
+	send_a_packet((OPCODE_SET_GAME_VARIANT << 12) | game_variant);
 }
 
 static void send_team(void)
 {
-	send_a_packet((OPCODE_SET_BADGE_TEAM << 12) | 2);
+	unsigned int team_id;
+
+	team_id = get_a_number("badge team ID",	0x0f);
+	send_a_packet((OPCODE_SET_BADGE_TEAM << 12) | team_id);
 }
 
 int main(int argc, char *argv[])
