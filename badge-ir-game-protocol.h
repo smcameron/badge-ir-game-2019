@@ -10,13 +10,16 @@
  * 5 address bits (like port number)
  * 9 badge id bits
  * 16 payload bits
+ *
  */
 
+#define BADGE_IR_GAME_ADDRESS 0x1A /* Arbitrary 5 bits for now ... we will need to coordinate this later */
+
 #define OPCODE_SET_GAME_START_TIME 0x00
-/* Remaining 12 bits are signed seconds until game starts, up to +/- 34 minutes. */
+/* Low 12 bits of payload are signed seconds until game starts, up to +/- 34 minutes. */
 
 #define OPCODE_SET_GAME_DURATION 0x01
-/* Remaining 12 bits are duration in seconds */
+/* low 12 bits of payload are duration in seconds */
 
 #define OPCODE_HIT 0x02
 /* Low 4 bits of payload are team id of shooter */
@@ -26,5 +29,11 @@
 
 #define OPCODE_REQUEST_BADGE_DUMP 0x04
 
+/* Set game variant.  Low 4 bits of payload contain game variant. */
 #define OPCODE_SET_GAME_VARIANT 0x05
+#define   GAME_VARIANT_FREE_FOR_ALL 0
+#define   GAME_VARIANT_TEAM_BATTLE 1
+#define   GAME_VARIANT_ZOMBIE 2
+#define   GAME_VARIANT_CAPTURE_THE_BADGE 3
+#define   GAME_VARIANT_NONE 0x0f
 

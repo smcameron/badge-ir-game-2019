@@ -34,11 +34,7 @@ static volatile int game_duration = -1;
 static volatile int game_start_timestamp = -1;
 static volatile int current_time = -1;
 static volatile int team = -1;
-static volatile int game_variant = -1;
-#define GAME_VARIANT_FREE_FOR_ALL 0
-#define GAME_VARIANT_TEAM_BATTLE 1
-#define GAME_VARIANT_ZOMBIE 2
-#define GAME_VARIANT_CAPTURE_THE_BADGE 3
+static volatile int game_variant = GAME_VARIANT_NONE;
 static volatile int suppress_further_hits_until = -1;
 static const char *game_type[] = {
 	"free for all",
@@ -51,7 +47,7 @@ static const char *game_type[] = {
 static struct hit_table_entry {
 	unsigned short badgeid;
 	unsigned short timestamp;
-	unsigned char team; 
+	unsigned char team;
 } hit_table[MAX_HIT_TABLE_ENTRIES];
 static int nhits = 0;
 
@@ -211,7 +207,7 @@ static void draw_menu(void)
 
 	title[0] = '\0';
 	timecode[0] = '\0';
-	color = WHITE;	
+	color = WHITE;
 	if (seconds_until_game_starts == NO_GAME_START_TIME) {
 		strcpy(title, "GAME OVER");
 		strcpy(timecode, "");
@@ -269,7 +265,7 @@ static void draw_menu(void)
 		strcat(str2, str);
 		FbWriteLine(str2);
 	}
-	if (game_variant >= 0) {	
+	if (game_variant != GAME_VARIANT_NONE) {
 		FbMove(10, 90);
 		strcpy(str2, game_type[game_variant % 4]);
 		FbWriteLine(str2);
@@ -324,7 +320,7 @@ static void initial_state(void)
 {
 	FbInit();
 	setup_ir_sensor();
-	register_ir_packet_callback(ir_packet_callback);	
+	register_ir_packet_callback(ir_packet_callback);
 	queue_in = 0;
 	queue_out = 0;
 	setup_main_menu();
@@ -400,8 +396,10 @@ static void process_hit(unsigned int packet)
 			return;
 	case GAME_VARIANT_FREE_FOR_ALL:
 		break;
+	case GAME_VARIANT_NONE:
+		/* fall through */
 	default:
-		break;
+		return; /* hits have no effect if a known game is not in play */
 	}
 
 	hit_table[nhits].badgeid = badgeid;
