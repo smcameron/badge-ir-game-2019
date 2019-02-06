@@ -59,7 +59,7 @@ static int nhits = 0;
  * 9 bits for badge_id,
  * 16 bits for payload
  */
-static unsigned int __attribute__((unused)) build_ir_packet(unsigned char start, unsigned char cmd,
+static unsigned int build_ir_packet(unsigned char start, unsigned char cmd,
 		unsigned char addr, unsigned short badge_id, unsigned short payload)
 {
 	unsigned int packet;
@@ -413,6 +413,58 @@ static void process_hit(unsigned int packet)
 	suppress_further_hits_until = current_time + 30;
 }
 
+static void send_game_id_packet(unsigned int game_id)
+{
+	send_ir_packet(build_ir_packet(1, 1, BADGE_IR_GAME_ADDRESS, get_badge_id(),
+		(OPCODE_GAME_ID << 12) | (game_id & 0x0fff)));
+}
+
+static void send_badge_record_count(unsigned int nhits)
+{
+	send_ir_packet(build_ir_packet(1, 1, BADGE_IR_GAME_ADDRESS, get_badge_id(),
+		(OPCODE_GAME_ID << 12) | (nhits & 0x0fff)));
+}
+
+static void send_badge_upload_hit_record_badge_id(struct hit_table_entry *h)
+{
+	send_ir_packet(build_ir_packet(1, 1, BADGE_IR_GAME_ADDRESS, get_badge_id(),
+		(OPCODE_BADGE_UPLOAD_HIT_RECORD_BADGE_ID << 12) | (h->badgeid & 0x01ff)));
+}
+
+static void send_badge_upload_hit_record_timestamp(struct hit_table_entry *h)
+{
+	send_ir_packet(build_ir_packet(1, 1, BADGE_IR_GAME_ADDRESS, get_badge_id(),
+		(OPCODE_BADGE_UPLOAD_HIT_RECORD_TIMESTAMP << 12) | (h->timestamp & 0x0fff)));
+}
+
+static void send_badge_upload_hit_record_team(struct hit_table_entry *h)
+{
+	send_ir_packet(build_ir_packet(1, 1, BADGE_IR_GAME_ADDRESS, get_badge_id(),
+		(OPCODE_SET_BADGE_TEAM << 12) | (h->team & 0x0fff)));
+}
+
+static void dump_badge_to_base_station(void)
+{
+	int i;
+
+	/*
+	* 1. Base station requests info from badge: OPCODE_REQUEST_BADGE_DUMP
+	* 2. Badge responds with OPCODE_GAME_ID
+	* 3. Badge responds with OPCODE_BADGE_RECORD_COUNT
+	* 4. Badge responds with triplets of OPCODE_BADGE_UPLOAD_HIT_RECORD_BADGE_ID,
+	*    OPCODE_BADGE_UPLOAD_HIT_RECORD_TIMESTAMP, and OPCODE_SET_BADGE_TEAM.
+	*/
+
+	send_game_id_packet(game_id);
+	send_badge_record_count(nhits);
+
+	for (i = 0; i < nhits; i++) {
+		send_badge_upload_hit_record_badge_id(&hit_table[i]);
+		send_badge_upload_hit_record_timestamp(&hit_table[i]);
+		send_badge_upload_hit_record_team(&hit_table[i]);
+	}
+}
+
 static void process_packet(unsigned int packet)
 {
 	unsigned int payload;
@@ -442,6 +494,7 @@ static void process_packet(unsigned int packet)
 		process_hit(packet);
 		break;
 	case OPCODE_REQUEST_BADGE_DUMP:
+		dump_badge_to_base_station();
 		break;
 	case OPCODE_SET_BADGE_TEAM:
 		team = payload & 0x0f; /* TODO sanity check this better. */

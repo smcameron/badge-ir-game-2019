@@ -152,12 +152,10 @@ static void send_game_id(void)
 		(OPCODE_GAME_ID << 12) | game_id));
 }
 
-static void send_game_id(void)
+static void send_request_badge_dump(void)
 {
-	unsigned int game_id;
-
-	game_id = get_a_number("game ID", 0x0f);
-	send_a_packet((OPCODE_GAME_ID << 12) | game_id);
+	send_a_packet(build_packet(1, 1, BADGE_IR_GAME_ADDRESS, BASE_STATION_BADGE_ID,
+		(OPCODE_REQUEST_BADGE_DUMP << 12)));
 }
 
 int main(int argc, char *argv[])
@@ -178,6 +176,7 @@ int main(int argc, char *argv[])
 		printf("  4. Send game variant.\n");
 		printf("  5. Send team.\n");
 		printf("  6. Send game ID.\n");
+		printf("  7. Send badge request dump.\n");
 		printf("  0. Exit\n");
 		printf("\n");
 		printf("  Enter choice: ");
@@ -204,6 +203,10 @@ int main(int argc, char *argv[])
 		case 5: send_team();
 			break;
 		case 6: send_game_id();
+			break;
+		case 7: send_request_badge_dump();
+			break;
+		case 8:
 			break;
 		default:
 			printf("Invalid choice, try again.\n");

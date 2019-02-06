@@ -28,6 +28,8 @@ void unregister_ir_packet_callback(void (*callback)(unsigned int));
 void setup_ir_sensor(void);
 void disable_interrupts(void);
 void enable_interrupts(void);
+void send_ir_packet(unsigned int packet);
+unsigned int get_badge_id(void);
 
 #define BLUE    0
 #define GREEN   1

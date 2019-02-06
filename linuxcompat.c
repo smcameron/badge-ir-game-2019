@@ -364,3 +364,14 @@ void enable_interrupts(void)
 	pthread_mutex_unlock(&interrupt_mutex);
 }
 
+void send_ir_packet(unsigned int packet)
+{
+	restore_original_input_mode();
+	printf("Send packet to base station: 0x%08x\n", packet);
+	set_nonblocking_input_mode();
+}
+
+unsigned int get_badge_id(void)
+{
+	return 0x0100;
+}
