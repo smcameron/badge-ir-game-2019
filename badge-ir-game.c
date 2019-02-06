@@ -62,10 +62,10 @@ static int nhits = 0;
 static unsigned int __attribute__((unused)) build_ir_packet(unsigned char start, unsigned char cmd,
 		unsigned char addr, unsigned short badge_id, unsigned short payload)
 {
+	unsigned int packet;
+
 	BUILD_ASSERT(sizeof(unsigned int) == 4); /* these generate no code */
 	BUILD_ASSERT(sizeof(unsigned short) == 2);
-
-	unsigned int packet;
 
 	packet = ((start & 0x01) << 31) | ((cmd & 0x01) << 30) | ((addr & 0x01f) << 25) |
 		 ((badge_id & 0x1ff) << 16) | (payload & 0x0ffff);
@@ -116,7 +116,7 @@ static enum game_state_type {
 	GAME_SCREEN_RENDER = 4,
 	GAME_SHOOT = 5,
 	GAME_CONFIRM_EXIT = 6,
-	GAME_EXIT_ABANDONED = 7,
+	GAME_EXIT_ABANDONED = 7
 } game_state = INITIAL_STATE;
 
 /* Note, game_state_fn[] array must have an entry for every value
