@@ -12,6 +12,8 @@
 #include "badge-ir-game-protocol.h"
 #include "build_bug_on.h"
 
+#define BASE_STATION_BADGE_ID 99
+
 static int fifo_fd = -1;
 
 static void open_fifo(char *fifoname)
@@ -24,6 +26,16 @@ static void open_fifo(char *fifoname)
 		exit(1);
 	}
 	printf("opened.  Proceeding.\n");
+}
+
+static unsigned int build_packet(unsigned char cmd, unsigned char start,
+			unsigned char address, unsigned short badge_id, unsigned short payload)
+{
+	return ((cmd & 0x01) << 31) |
+		((start & 0x01) << 30) |
+		((address & 0x01f) << 25) |
+		((badge_id & 0x1ff) << 16) |
+		(payload);
 }
 
 static void send_a_packet(unsigned int packet)
@@ -81,51 +93,63 @@ static unsigned int get_a_number(char *prompt, unsigned int mask)
 
 static void send_hit_packet(void)
 {
-	unsigned int badge_id, team_id, packet;
+	unsigned int badge_id, team_id;
 
 	badge_id = get_a_number("Shooter's badge ID", 0x01ff);
 	team_id = get_a_number("Shooter's team ID", 0x0f);
 
-	packet =
-		(1 << 31) |
-		(1 << 30) |
-		(BADGE_IR_GAME_ADDRESS << 25) |
-		(badge_id << 16) |
-		(OPCODE_HIT << 12) |
-		team_id;
-	send_a_packet(packet);
+	send_a_packet(build_packet(1, 1, BADGE_IR_GAME_ADDRESS, badge_id,
+		(OPCODE_HIT << 12) | team_id));
 }
 
 static void send_game_start_time(void)
 {
 	unsigned int start_time;
+	unsigned short badge_id = BASE_STATION_BADGE_ID;
 
 	start_time = get_a_number("seconds until game starts", 0x0fff);
-	send_a_packet((OPCODE_SET_GAME_START_TIME << 12) | start_time);
+	send_a_packet(build_packet(1, 1, BADGE_IR_GAME_ADDRESS, badge_id,
+			(OPCODE_SET_GAME_START_TIME << 12) | start_time));
 }
 
 static void send_game_duration(void)
 {
 	unsigned int duration;
+	unsigned short badge_id = BASE_STATION_BADGE_ID;
 
 	duration = get_a_number("duration of game in seconds", 0x0fff);
-	send_a_packet((OPCODE_SET_GAME_DURATION << 12) | duration);
+	send_a_packet(build_packet(1, 1, BADGE_IR_GAME_ADDRESS, badge_id,
+		(OPCODE_SET_GAME_DURATION << 12) | duration));
 }
 
 static void send_game_variant(void)
 {
 	unsigned int game_variant;
+	unsigned short badge_id = BASE_STATION_BADGE_ID;
 
 	game_variant = get_a_number("game variant", 0x0f);
-	send_a_packet((OPCODE_SET_GAME_VARIANT << 12) | game_variant);
+	send_a_packet(build_packet(1, 1, BADGE_IR_GAME_ADDRESS, badge_id,
+		(OPCODE_SET_GAME_VARIANT << 12) | game_variant));
 }
 
 static void send_team(void)
 {
 	unsigned int team_id;
+	unsigned short badge_id = BASE_STATION_BADGE_ID;
 
 	team_id = get_a_number("badge team ID",	0x0f);
-	send_a_packet((OPCODE_SET_BADGE_TEAM << 12) | team_id);
+	send_a_packet(build_packet(1, 1, BADGE_IR_GAME_ADDRESS, badge_id,
+		(OPCODE_SET_BADGE_TEAM << 12) | team_id));
+}
+
+static void send_game_id(void)
+{
+	unsigned int game_id;
+	unsigned short badge_id = BASE_STATION_BADGE_ID;
+
+	game_id = get_a_number("game ID", 0x0f);
+	send_a_packet(build_packet(1, 1, BADGE_IR_GAME_ADDRESS, badge_id,
+		(OPCODE_GAME_ID << 12) | game_id));
 }
 
 static void send_game_id(void)

@@ -452,9 +452,7 @@ static void process_packet(unsigned int packet)
 		screen_changed = 1;
 		break;
 	case OPCODE_GAME_ID:
-		printf("seconds_until_game_starts = %d\n",
-			seconds_until_game_starts);
-		game_id = payload;
+		game_id = payload & 0x0fff;
 		break;
 	default:
 		break;
