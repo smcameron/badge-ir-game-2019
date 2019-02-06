@@ -43,7 +43,7 @@
 #define OPCODE_BADGE_UPLOAD_HIT_RECORD_BADGE_ID 0x08
 /* low 9 bits contain badge id of shooter */
 
-#define OPCODE_GAME_ID 0x10
+#define OPCODE_GAME_ID 0x0a
 /* payload is 16 bit unique game ID.  This opcode is bidirectional.  Base
  * station transmits this to the badge at the beginning of a game, and the
  * badge transmits it back to the base station when syncing. */
