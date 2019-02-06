@@ -30,6 +30,7 @@ static int packet_queue[QUEUE_SIZE] = { 0 };
 static int screen_changed = 0;
 #define NO_GAME_START_TIME -1000000
 static volatile int seconds_until_game_starts = NO_GAME_START_TIME;
+static volatile unsigned int game_id = -1;
 static volatile int game_duration = -1;
 static volatile int game_start_timestamp = -1;
 static volatile int current_time = -1;
@@ -449,6 +450,11 @@ static void process_packet(unsigned int packet)
 	case OPCODE_SET_GAME_VARIANT:
 		game_variant = payload & 0x0f; /* TODO sanity check this better. */
 		screen_changed = 1;
+		break;
+	case OPCODE_GAME_ID:
+		printf("seconds_until_game_starts = %d\n",
+			seconds_until_game_starts);
+		game_id = payload;
 		break;
 	default:
 		break;

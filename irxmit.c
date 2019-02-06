@@ -128,6 +128,14 @@ static void send_team(void)
 	send_a_packet((OPCODE_SET_BADGE_TEAM << 12) | team_id);
 }
 
+static void send_game_id(void)
+{
+	unsigned int game_id;
+
+	game_id = get_a_number("game ID", 0x0f);
+	send_a_packet((OPCODE_GAME_ID << 12) | game_id);
+}
+
 int main(int argc, char *argv[])
 {
 	int rc, choice = 0;
@@ -145,6 +153,7 @@ int main(int argc, char *argv[])
 		printf("  3. Send game duration.\n");
 		printf("  4. Send game variant.\n");
 		printf("  5. Send team.\n");
+		printf("  6. Send game ID.\n");
 		printf("  0. Exit\n");
 		printf("\n");
 		printf("  Enter choice: ");
@@ -169,6 +178,8 @@ int main(int argc, char *argv[])
 		case 4: send_game_variant();
 			break;
 		case 5: send_team();
+			break;
+		case 6: send_game_id();
 			break;
 		default:
 			printf("Invalid choice, try again.\n");
