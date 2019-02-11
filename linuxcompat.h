@@ -9,10 +9,6 @@ void FbLine(unsigned char x1, unsigned char y1, unsigned char x2, unsigned char 
 void FbHorizontalLine(unsigned char x1, unsigned char y1, unsigned char x2, unsigned char y2);
 void FbVerticalLine(unsigned char x1, unsigned char y1, unsigned char x2, unsigned char y2);
 void FbClear(void);
-void restore_original_input_mode(void);
-void set_nonblocking_input_mode(void);
-int wait_for_keypress(void);
-int get_keypress(void);
 void FbMove(unsigned char x, unsigned char y);
 void FbWriteLine(char *s);
 void itoa(char *string, int value, int base);
@@ -30,7 +26,7 @@ void disable_interrupts(void);
 void enable_interrupts(void);
 void send_ir_packet(unsigned int packet);
 unsigned int get_badge_id(void);
-void start_gtk(int *argc, char ***argv, int (*main_badge_function)(void));
+void start_gtk(int *argc, char ***argv, int (*main_badge_function)(void), int callback_hz);
 
 #define BLUE    0
 #define GREEN   1

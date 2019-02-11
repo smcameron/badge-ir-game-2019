@@ -596,7 +596,7 @@ int badge_ir_game_loop(void)
 
 int main(int argc, char *argv[])
 {
-	start_gtk(&argc, &argv, badge_ir_game_loop);
+	start_gtk(&argc, &argv, badge_ir_game_loop, 30);
 	return 0;
 }
 
