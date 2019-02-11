@@ -553,46 +553,8 @@ static void advance_time()
 
 static void game_process_button_presses(void)
 {
-#ifdef __linux__
-	int rc, kp;
-
-	rc = wait_for_keypress(); /* or timeout */
 	check_for_incoming_packets();
 	advance_time();
-	if (rc == 0) { /* timed out, 1/10th second */
-		restore_original_input_mode();
-		game_state = GAME_MAIN_MENU;
-		return;
-	}
-	kp = get_keypress();
-	if (kp < 0) {
-		game_state = GAME_EXIT;
-		return;
-	}
-	switch (kp) {
-	case 'w':
-		if (menu.menu_active)
-			menu_change_current_selection(-1);
-		break;
-	case 's':
-		if (menu.menu_active)
-			menu_change_current_selection(1);
-		break;
-	case 'a':
-		break;
-	case 'd':
-		break;
-	case ' ':
-		button_pressed();
-		break;
-	case 'q':
-		game_state = GAME_EXIT;
-		break;
-	default:
-		break;
-	}
-#else
-
 	if (BUTTON_PRESSED_AND_CONSUME) {
 		button_pressed();
 	} else if (TOP_TAP_AND_CONSUME) {
@@ -603,10 +565,10 @@ static void game_process_button_presses(void)
 			menu_change_current_selection(1);
 	} else if (LEFT_TAP_AND_CONSUME) {
 	} else if (RIGHT_TAP_AND_CONSUME) {
-	} else {
+	}
+	if (game_state == GAME_PROCESS_BUTTON_PRESSES)
+		game_state = GAME_MAIN_MENU;
 	return;
-}
-#endif
 }
 
 static void game_screen_render(void)
@@ -624,21 +586,17 @@ static void game_shoot(void)
 	game_state = GAME_MAIN_MENU;
 }
 
+int badge_ir_game_loop(void)
+{
+	game_state_fn[game_state]();
+	return 0;
+}
+
 #ifdef __linux__
 
 int main(int argc, char *argv[])
 {
-	do {
-		game_state_fn[game_state]();
-	} while (game_state != GAME_EXIT);
-	return 0;
-}
-
-#else
-
-int badge_ir_game_loop(void)
-{
-	game_state_fn[game_state]();
+	start_gtk(&argc, &argv, badge_ir_game_loop);
 	return 0;
 }
 

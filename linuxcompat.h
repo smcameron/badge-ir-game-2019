@@ -30,6 +30,7 @@ void disable_interrupts(void);
 void enable_interrupts(void);
 void send_ir_packet(unsigned int packet);
 unsigned int get_badge_id(void);
+void start_gtk(int *argc, char ***argv, int (*main_badge_function)(void));
 
 #define BLUE    0
 #define GREEN   1
@@ -39,4 +40,16 @@ unsigned int get_badge_id(void);
 #define CYAN    5
 #define YELLOW  6
 #define MAGENTA 7
+
+int button_pressed_and_consume();
+int top_tap_and_consume();
+int bottom_tap_and_consume();
+int left_tap_and_consume();
+int right_tap_and_consume();
+
+#define BUTTON_PRESSED_AND_CONSUME button_pressed_and_consume()
+#define TOP_TAP_AND_CONSUME top_tap_and_consume()
+#define BOTTOM_TAP_AND_CONSUME bottom_tap_and_consume()
+#define LEFT_TAP_AND_CONSUME left_tap_and_consume()
+#define RIGHT_TAP_AND_CONSUME right_tap_and_consume()
 
