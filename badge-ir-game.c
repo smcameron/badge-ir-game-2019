@@ -598,14 +598,14 @@ static void game_process_button_presses(void)
 	advance_time();
 	if (BUTTON_PRESSED_AND_CONSUME) {
 		button_pressed();
-	} else if (TOP_TAP_AND_CONSUME) {
+	} else if (UP_BTN_AND_CONSUME) {
 		if (menu.menu_active)
 			menu_change_current_selection(-1);
-	} else if (BOTTOM_TAP_AND_CONSUME) {
+	} else if (DOWN_BTN_AND_CONSUME) {
 		if (menu.menu_active)
 			menu_change_current_selection(1);
-	} else if (LEFT_TAP_AND_CONSUME) {
-	} else if (RIGHT_TAP_AND_CONSUME) {
+	} else if (LEFT_BTN_AND_CONSUME) {
+	} else if (RIGHT_BTN_AND_CONSUME) {
 	}
 	if (game_state == GAME_PROCESS_BUTTON_PRESSES)
 		game_state = GAME_MAIN_MENU;
