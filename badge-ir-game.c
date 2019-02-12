@@ -38,10 +38,10 @@ static volatile int team = -1;
 static volatile int game_variant = GAME_VARIANT_NONE;
 static volatile int suppress_further_hits_until = -1;
 static const char *game_type[] = {
-	"free for all",
-	"team battle",
-	"zombies!",
-	"capture badge",
+	"FREE FOR ALL",
+	"TEAM BATTLE",
+	"ZOMBIES!",
+	"CAPTURE BADGE",
 };
 
 #define MAX_HIT_TABLE_ENTRIES 256
