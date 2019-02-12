@@ -210,6 +210,7 @@ static void draw_menu(void)
 	timecode[0] = '\0';
 	color = WHITE;
 	if (seconds_until_game_starts == NO_GAME_START_TIME) {
+		suppress_further_hits_until = -1;
 		strcpy(title, "GAME OVER");
 		strcpy(timecode, "");
 		color = YELLOW;
@@ -226,6 +227,7 @@ static void draw_menu(void)
 				strcat(timecode, " SECS");
 				color = WHITE;
 			} else {
+				suppress_further_hits_until = -1;
 				strcpy(title, "GAME OVER");
 				strcpy(timecode, "");
 				game_duration = -1;
@@ -240,7 +242,7 @@ static void draw_menu(void)
 		color = RED;
 		FbColor(color);
 		FbMove(10, 40);
-		strcpy(str, "DEADTIME:");
+		strcpy(str, "DEAD TIME:");
 		itoa(str2, suppress_further_hits_until - current_time, 10);
 		if (old_deadtime != suppress_further_hits_until - current_time) {
 			old_deadtime = suppress_further_hits_until - current_time;
