@@ -320,7 +320,6 @@ static void setup_confirm_exit_menu(void)
 }
 
 #ifndef __linux__
-#define LASER_TAG_CALLBACK_NUMBER 9  /* TODO figure out what this should be */
 static void (*old_callback)(IRpacket_t) = NULL;
 static void register_ir_packet_callback(void (*callback)(IRpacket_t))
 {
@@ -331,14 +330,14 @@ static void register_ir_packet_callback(void (*callback)(IRpacket_t))
 	 * Also, if an interrupt happens in the midst of the assignment we'll
 	 * be in trouble.  I expect the assignment is probably atomic though.
 	 */
-	old_callback = IRcallbacks[LASER_TAG_CALLBACK_NUMBER];
-	IRcallbacks[LASER_TAG_CALLBACK_NUMBER] = callback;
+	old_callback = IRcallbacks[BADGE_IR_GAME_ADDRESS];
+	IRcallbacks[BADGE_IR_GAME_ADDRESS] = callback;
 }
 
 static void unregister_ir_packet_callback(void)
 {
 	/* Gross. */
-	IRcallbacks[LASER_TAG_CALLBACK_NUMBER] = old_callback;
+	IRcallbacks[BADGE_IR_GAME_ADDRESS] = old_callback;
 }
 #endif
 
