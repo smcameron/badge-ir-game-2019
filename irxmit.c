@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
 	char buffer[256];
 	char *x;
 
-	open_fifo("/tmp/badge-ir-fifo");
+	open_fifo("/tmp/fifo-to-badge");
 
 	do {
 		printf("\n");
