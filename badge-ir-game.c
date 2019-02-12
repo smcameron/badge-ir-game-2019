@@ -22,7 +22,7 @@ code must run in.
 #define ARRAYSIZE(x) (sizeof((x)) / sizeof((x)[0]))
 
 /* These need to be protected from interrupts. */
-#define QUEUE_SIZE 100
+#define QUEUE_SIZE 5
 static int queue_in;
 static int queue_out;
 static int packet_queue[QUEUE_SIZE] = { 0 };
@@ -545,21 +545,30 @@ static void process_packet(unsigned int packet)
 	}
 }
 
+#ifdef __linux__
+#define DISABLE_INTERRUPTS do { disable_interrupts(); } while (0)
+#define ENABLE_INTERRUPTS do { enable_interrupts(); } while (0)
+#else
+#define DISABLE_INTERRUPTS
+#define ENABLE_INTERRUPTS
+#endif
+
+
 static void check_for_incoming_packets(void)
 {
 	unsigned int new_packet;
 	int next_queue_out;
 
-	disable_interrupts();
+	DISABLE_INTERRUPTS;
 	while (queue_out != queue_in) {
 		next_queue_out = (queue_out + 1) % QUEUE_SIZE;
 		new_packet = packet_queue[queue_out];
 		queue_out = next_queue_out;
-		enable_interrupts();
+		ENABLE_INTERRUPTS;
 		process_packet(new_packet);
-		disable_interrupts();
+		DISABLE_INTERRUPTS;
 	}
-	enable_interrupts();
+	ENABLE_INTERRUPTS;
 }
 
 static void advance_time()
