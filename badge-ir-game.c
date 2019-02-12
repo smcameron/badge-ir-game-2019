@@ -188,7 +188,7 @@ static void draw_menu(void)
 	FbMove(8, 5);
 	FbWriteLine(menu.title);
 
-	y = SCREEN_YDIM / 2 - 10 * (menu.current_item - first_item);
+	y = SCREEN_YDIM / 2 - 12 * (menu.current_item - first_item);
 	for (i = first_item; i <= last_item; i++) {
 		if (i == menu.current_item)
 			FbColor(GREEN);
@@ -196,7 +196,7 @@ static void draw_menu(void)
 			FbColor(WHITE);
 		FbMove(10, y);
 		FbWriteLine(menu.item[i].text);
-		y += 10;
+		y += 12;
 	}
 
 	FbColor(GREEN);
@@ -239,7 +239,7 @@ static void draw_menu(void)
 		static int old_deadtime = 0;
 		color = RED;
 		FbColor(color);
-		FbMove(10, 50);
+		FbMove(10, 40);
 		strcpy(str, "DEADTIME:");
 		itoa(str2, suppress_further_hits_until - current_time, 10);
 		if (old_deadtime != suppress_further_hits_until - current_time) {
@@ -250,7 +250,19 @@ static void draw_menu(void)
 		FbWriteLine(str);
 	}
 	FbColor(color);
-	FbMove(10, 40);
+	if (game_variant != GAME_VARIANT_NONE) {
+		FbMove(10, 10);
+		strcpy(str2, game_type[game_variant % 4]);
+		FbWriteLine(str2);
+	}
+	if (team >= 0) {
+		FbMove(10, 20);
+		itoa(str, team, 10);
+		strcpy(str2, "TEAM:");
+		strcat(str2, str);
+		FbWriteLine(str2);
+	}
+	FbMove(10, 30);
 	strcpy(str, "HITS:");
 	itoa(str2, nhits, 10);
 	strcat(str, str2);
@@ -259,18 +271,6 @@ static void draw_menu(void)
 	FbWriteLine(title);
 	FbMove(10, 110);
 	FbWriteLine(timecode);
-	if (team >= 0) {
-		FbMove(10, 80);
-		itoa(str, team, 10);
-		strcpy(str2, "TEAM:");
-		strcat(str2, str);
-		FbWriteLine(str2);
-	}
-	if (game_variant != GAME_VARIANT_NONE) {
-		FbMove(10, 90);
-		strcpy(str2, game_type[game_variant % 4]);
-		FbWriteLine(str2);
-	}
 	game_state = GAME_SCREEN_RENDER;
 }
 
