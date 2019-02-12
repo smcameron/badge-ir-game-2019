@@ -14,6 +14,39 @@ code must run in.
 #include <sys/time.h>
 
 #include "linuxcompat.h"
+
+#define SETUP_IR_SENSOR do { setup_ir_sensor(); } while (0)
+
+#else
+
+#include "colors.h"
+#include "menu.h"
+#include "buttons.h"
+#include "ir.h"
+#include "flash.h" /* for G_sysData */
+
+/* TODO: I shouldn't have to declare these myself. */
+#define size_t int
+extern char *strcpy(char *dest, const char *src);
+extern char *strncpy(char *dest, const char *src, size_t n);
+extern void *memset(void *s, int c, size_t n);
+extern void *memcpy(void *dest, const void *src, size_t n);
+extern char *strcat(char *dest, const char *src);
+#ifndef NULL
+#define NULL 0
+#endif
+
+/* TODO: Is there a canonical header I should include to get the screen dimensions? */
+#define SCREEN_XDIM 132
+#define SCREEN_YDIM 132
+
+#define SETUP_IR_SENSOR
+
+static int get_badge_id(void)
+{
+	return G_sysData.badgeId & 0x1ff; /* TODO: Is this right? */
+}
+
 #endif
 
 #include "badge-ir-game-protocol.h"
@@ -295,7 +328,7 @@ static void ir_packet_callback(struct IRpacket_t packet)
 	next_queue_in = (queue_in + 1) % QUEUE_SIZE;
 	if (next_queue_in == queue_out) /* queue is full, drop packet */
 		return;
-	packet_queue[queue_in] = packet.v;
+	memcpy(&packet_queue[queue_in], &packet, sizeof(packet_queue[0]));
 	queue_in = next_queue_in;
 }
 
@@ -320,8 +353,8 @@ static void setup_confirm_exit_menu(void)
 }
 
 #ifndef __linux__
-static void (*old_callback)(IRpacket_t) = NULL;
-static void register_ir_packet_callback(void (*callback)(IRpacket_t))
+static void (*old_callback)(struct IRpacket_t) = NULL;
+static void register_ir_packet_callback(void (*callback)(struct IRpacket_t))
 {
 	/* This is pretty gross.  Ideally there should be some registration,
 	 * unregistration functions provided by ir.[ch] and I shouldn't touch
@@ -330,21 +363,21 @@ static void register_ir_packet_callback(void (*callback)(IRpacket_t))
 	 * Also, if an interrupt happens in the midst of the assignment we'll
 	 * be in trouble.  I expect the assignment is probably atomic though.
 	 */
-	old_callback = IRcallbacks[BADGE_IR_GAME_ADDRESS];
-	IRcallbacks[BADGE_IR_GAME_ADDRESS] = callback;
+	old_callback = IRcallbacks[BADGE_IR_GAME_ADDRESS].handler;
+	IRcallbacks[BADGE_IR_GAME_ADDRESS].handler = callback;
 }
 
 static void unregister_ir_packet_callback(void)
 {
 	/* Gross. */
-	IRcallbacks[BADGE_IR_GAME_ADDRESS] = old_callback;
+	IRcallbacks[BADGE_IR_GAME_ADDRESS].handler = old_callback;
 }
 #endif
 
 static void initial_state(void)
 {
 	FbInit();
-	setup_ir_sensor();
+	SETUP_IR_SENSOR;
 	register_ir_packet_callback(ir_packet_callback);
 	queue_in = 0;
 	queue_out = 0;
