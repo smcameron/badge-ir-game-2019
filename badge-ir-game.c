@@ -287,7 +287,7 @@ static void menu_change_current_selection(int direction)
 	screen_changed |= (menu.current_item != old);
 }
 
-static void ir_packet_callback(unsigned int packet)
+static void ir_packet_callback(struct IRpacket_t packet)
 {
 	/* Interrupts will be already disabled when this is called. */
 	int next_queue_in;
@@ -295,7 +295,7 @@ static void ir_packet_callback(unsigned int packet)
 	next_queue_in = (queue_in + 1) % QUEUE_SIZE;
 	if (next_queue_in == queue_out) /* queue is full, drop packet */
 		return;
-	packet_queue[queue_in] = packet;
+	packet_queue[queue_in] = packet.v;
 	queue_in = next_queue_in;
 }
 
@@ -319,6 +319,29 @@ static void setup_confirm_exit_menu(void)
 	screen_changed = 1;
 }
 
+#ifndef __linux__
+#define LASER_TAG_CALLBACK_NUMBER 9  /* TODO figure out what this should be */
+static void (*old_callback)(IRpacket_t) = NULL;
+static void register_ir_packet_callback(void (*callback)(IRpacket_t))
+{
+	/* This is pretty gross.  Ideally there should be some registration,
+	 * unregistration functions provided by ir.[ch] and I shouldn't touch
+	 * IRcallbacks[] directly myself, and all those hardcoded ir_app[1-7]()
+	 * functions should disappear.
+	 * Also, if an interrupt happens in the midst of the assignment we'll
+	 * be in trouble.  I expect the assignment is probably atomic though.
+	 */
+	old_callback = IRcallbacks[LASER_TAG_CALLBACK_NUMBER];
+	IRcallbacks[LASER_TAG_CALLBACK_NUMBER] = callback;
+}
+
+static void unregister_ir_packet_callback(void)
+{
+	/* Gross. */
+	IRcallbacks[LASER_TAG_CALLBACK_NUMBER] = old_callback;
+}
+#endif
+
 static void initial_state(void)
 {
 	FbInit();
@@ -333,7 +356,7 @@ static void initial_state(void)
 
 static void game_exit(void)
 {
-	unregister_ir_packet_callback(ir_packet_callback);
+	unregister_ir_packet_callback();
 	returnToMenus();
 }
 
@@ -413,6 +436,14 @@ static void process_hit(unsigned int packet)
 	if (nhits >= MAX_HIT_TABLE_ENTRIES)
 		nhits = 0;
 	suppress_further_hits_until = current_time + 30;
+}
+
+static void send_ir_packet(unsigned int packet)
+{
+	union IRpacket_u p;
+
+	p.v = packet;
+	IRqueueSend(p);
 }
 
 static void send_game_id_packet(unsigned int game_id)
