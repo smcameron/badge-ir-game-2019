@@ -20,7 +20,8 @@
 #include "bline.h"
 #include "linuxcompat.h"
 
-#define FIFO_TO_BADGE "/tmp/fifo-to-badge"
+char input_fifo_name[PATH_MAX];
+char output_fifo_name[PATH_MAX];
 
 /* Define only one of these as 1 */
 #define USE_2016_BADGE_FONT 0
@@ -410,7 +411,7 @@ static void *read_from_fifo(void *thread_info)
 	struct IRpacket_t buffer;
 	unsigned char *buf = (unsigned char *) &buffer;
 
-	fifo_fd[0] = maybe_create_and_open_fifo(FIFO_TO_BADGE, O_RDONLY);
+	fifo_fd[0] = maybe_create_and_open_fifo(input_fifo_name, O_RDONLY);
 	if (fifo_fd[0] == -1)
 		exit(1);
 
@@ -422,7 +423,7 @@ static void *read_from_fifo(void *thread_info)
 			if (rc < 0 && errno == EINTR)
 				continue;
 			if (rc < 0) {
-				fprintf(stderr, "Failed to read from %s: %s\n", FIFO_TO_BADGE, strerror(errno));
+				fprintf(stderr, "Failed to read from %s: %s\n", input_fifo_name, strerror(errno));
 				exit(1);
 				break;
 			}
@@ -445,12 +446,16 @@ static void *read_from_fifo(void *thread_info)
 
 void setup_ir_sensor()
 {
-	pthread_t thr;
+	pthread_t read_thread;
 	int rc;
 
-	rc = pthread_create(&thr, NULL, read_from_fifo, NULL);
+	rc = pthread_create(&read_thread, NULL, read_from_fifo, NULL);
 	if (rc < 0)
 		fprintf(stderr, "Failed to create thread to read from fifo: %s\n", strerror(errno));
+
+	fifo_fd[1] = maybe_create_and_open_fifo(output_fifo_name, O_WRONLY);
+	if (fifo_fd[1] == -1)
+		exit(1);
 }
 
 static pthread_mutex_t interrupt_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -467,7 +472,13 @@ void enable_interrupts(void)
 
 void IRqueueSend(union IRpacket_u packet)
 {
-	printf("Send packet to base station: 0x%08x\n", packet.v);
+	int rc;
+
+	rc = write(fifo_fd[1], &packet.v, sizeof(packet.v));
+	if (rc == sizeof(packet.v))
+		printf("Sent packet to base station: 0x%08x\n", packet.v);
+	else
+		fprintf(stderr, "Failed to write packet to fifo: %s\n", strerror(errno));
 }
 
 unsigned int get_badge_id(void)
