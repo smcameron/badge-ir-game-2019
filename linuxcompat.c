@@ -367,49 +367,58 @@ void unregister_ir_packet_callback(void)
 	ir_packet_callback = ir_packet_ignore;
 }
 
-static int fifo_fd = -1;
+static int fifo_fd[2] = { -1, -1 };
+
+static int maybe_create_and_open_fifo(char *name, int mode)
+{
+	int rc, fd;
+	struct stat s;
+
+	rc = stat(name, &s);
+	if (!rc) {
+		if (!S_ISFIFO(s.st_mode)) {
+			fprintf(stderr, "%s exists, but is not a named pipe.\n", name);
+			return -1;
+		}
+	} else {
+		if (errno != ENOENT) {
+			fprintf(stderr, "Failed to stat %s: %s\n", name, strerror(errno));
+			return -1;
+		}
+	}
+
+try_again:
+	fd = open(name, mode);
+	if (fd < 0) {
+		if (errno == ENOENT) {
+			rc = mkfifo(name, 0644);
+			if (rc) {
+				fprintf(stderr, "Failed to create fifo %s\n", name);
+				return -1;
+			}
+			goto try_again;
+		}
+		fprintf(stderr, "Failed to open %s: %s\n", name, strerror(errno));
+		return -1;
+	}
+	return fd;
+}
 
 static void *read_from_fifo(void *thread_info)
 {
 	int rc, count, bytesleft;
 	struct IRpacket_t buffer;
 	unsigned char *buf = (unsigned char *) &buffer;
-	struct stat s;
 
-	rc = stat(FIFO_TO_BADGE, &s);
-	if (!rc) {
-		if (!S_ISFIFO(s.st_mode)) {
-			fprintf(stderr, "%s exists, but is not a named pipe.\n", FIFO_TO_BADGE);
-			exit(1);
-		}
-	} else {
-		if (errno != ENOENT) {
-			fprintf(stderr, "Failed to stat %s: %s\n", FIFO_TO_BADGE, strerror(errno));
-			exit(1);
-		}
-	}
-
-try_again:
-	fifo_fd = open(FIFO_TO_BADGE, O_RDONLY);
-	if (fifo_fd < 0) {
-		if (errno == ENOENT) {
-			rc = mkfifo(FIFO_TO_BADGE, 0644);
-			if (rc) {
-				fprintf(stderr, "Failed to create fifo %s\n", FIFO_TO_BADGE);
-				exit(1);
-			}
-			goto try_again;
-		}
-		fprintf(stderr, "Failed to open %s: %s\n", FIFO_TO_BADGE, strerror(errno));
+	fifo_fd[0] = maybe_create_and_open_fifo(FIFO_TO_BADGE, O_RDONLY);
+	if (fifo_fd[0] == -1)
 		exit(1);
-		return NULL;
-	}
 
 	count = 0;
 	bytesleft = 4;
 	do {
 		do {
-			rc = read(fifo_fd, &buf[count], bytesleft);
+			rc = read(fifo_fd[0], &buf[count], bytesleft);
 			if (rc < 0 && errno == EINTR)
 				continue;
 			if (rc < 0) {
