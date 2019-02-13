@@ -640,7 +640,7 @@ static void game_process_button_presses(void)
 	} else if (LEFT_BTN_AND_CONSUME) {
 	} else if (RIGHT_BTN_AND_CONSUME) {
 	}
-	if (game_state == GAME_PROCESS_BUTTON_PRESSES)
+	if (game_state == GAME_PROCESS_BUTTON_PRESSES && screen_changed)
 		game_state = GAME_MAIN_MENU;
 	return;
 }
