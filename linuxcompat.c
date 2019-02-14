@@ -474,6 +474,9 @@ void setup_ir_sensor(int argc, char *argv[])
 		}
 	};
 
+	printf("This program will block until something opens %s for reading\n",
+			output_fifo_name);
+
 	rc = pthread_create(&read_thread, NULL, read_from_fifo, NULL);
 	if (rc < 0)
 		fprintf(stderr, "Failed to create thread to read from fifo: %s\n", strerror(errno));
