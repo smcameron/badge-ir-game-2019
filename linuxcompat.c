@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <errno.h>
+#include <getopt.h>
 
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
@@ -444,10 +445,34 @@ static void *read_from_fifo(void *thread_info)
 	return NULL;
 }
 
-void setup_ir_sensor()
+static struct option long_options[] = {
+	{ "inputfifo", required_argument, NULL, 'i' },
+	{ "outputfifo", required_argument, NULL, 'o' },
+	{ NULL, 0, NULL, '\0' },
+}; 
+
+void setup_ir_sensor(int argc, char *argv[])
 {
 	pthread_t read_thread;
-	int rc;
+	int c, rc;
+
+	strcpy(input_fifo_name, "/tmp/fifo-to-badge");
+	strcpy(output_fifo_name, "/tmp/fifo-from-badge");
+
+	while (1) {
+		int option_index;
+		c = getopt_long(argc, argv, "i:o:", long_options, &option_index);
+		if (c == -1)
+			break;
+		switch (c) {
+		case 'i':
+			strcpy(input_fifo_name, optarg);
+			break;
+		case 'o':
+			strcpy(output_fifo_name, optarg);
+			break;
+		}
+	};
 
 	rc = pthread_create(&read_thread, NULL, read_from_fifo, NULL);
 	if (rc < 0)

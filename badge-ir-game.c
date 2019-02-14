@@ -15,7 +15,10 @@ code must run in.
 
 #include "linuxcompat.h"
 
-#define SETUP_IR_SENSOR do { setup_ir_sensor(); } while (0)
+int argcount;
+char **arguments;
+
+#define SETUP_IR_SENSOR do { setup_ir_sensor(argcount, arguments); } while (0)
 
 #else
 
@@ -670,6 +673,9 @@ int badge_ir_game_loop(void)
 
 int main(int argc, char *argv[])
 {
+	argcount = argc;
+	arguments = argv;
+
 	start_gtk(&argc, &argv, badge_ir_game_loop, 30);
 	return 0;
 }

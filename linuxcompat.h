@@ -16,7 +16,7 @@ int abs(int x);
 void returnToMenus(void);
 void FbColor(int color);
 
-void setup_ir_sensor(void);
+void setup_ir_sensor(int argc, char *argv[]);
 void disable_interrupts(void);
 void enable_interrupts(void);
 unsigned int get_badge_id(void);
