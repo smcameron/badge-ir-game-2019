@@ -478,6 +478,8 @@ static void send_ir_packet(unsigned int packet)
 	union IRpacket_u p;
 
 	p.v = packet;
+	p.v = packet | (1 << 30); /* Set command bit on outgoing packets */
+
 	IRqueueSend(p);
 }
 
