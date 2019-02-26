@@ -5,7 +5,7 @@ GTKLDFLAGS:=$(shell pkg-config --libs gtk+-2.0) $(shell pkg-config --libs gthrea
 
 CC=gcc
 
-all:	badge-ir-game irxmit
+all:	lasertag irxmit
 
 bline.o:	bline.c bline.h
 	${CC} ${CFLAGS} -c bline.c
@@ -13,10 +13,10 @@ bline.o:	bline.c bline.h
 linuxcompat.o:	linuxcompat.c linuxcompat.h Makefile bline.h
 	${CC} ${CFLAGS} ${GTKCFLAGS} -c linuxcompat.c
 
-badge-ir-game:	badge-ir-game.c linuxcompat.o bline.o Makefile build_bug_on.h badge-ir-game-protocol.h
-	${CC} ${CFLAGS} ${GTKCFLAGS} -o badge-ir-game badge-ir-game.c linuxcompat.o bline.o ${GTKLDFLAGS}
+lasertag:	lasertag.c linuxcompat.o bline.o Makefile build_bug_on.h lasertag-protocol.h
+	${CC} ${CFLAGS} ${GTKCFLAGS} -o lasertag lasertag.c linuxcompat.o bline.o ${GTKLDFLAGS}
 
-irxmit:	irxmit.c badge-ir-game-protocol.h
+irxmit:	irxmit.c lasertag-protocol.h
 	${CC} ${CFLAGS} -o irxmit irxmit.c
 
 clean:
