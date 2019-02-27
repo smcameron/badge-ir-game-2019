@@ -147,7 +147,7 @@ static void send_game_id(void)
 	unsigned int game_id;
 	unsigned short badge_id = BASE_STATION_BADGE_ID;
 
-	game_id = get_a_number("game ID", 0x0f);
+	game_id = get_a_number("game ID", 0x0fff);
 	send_a_packet(build_packet(1, 1, BADGE_IR_GAME_ADDRESS, badge_id,
 		(OPCODE_GAME_ID << 12) | game_id));
 }
